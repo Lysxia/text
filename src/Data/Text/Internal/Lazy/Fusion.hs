@@ -17,6 +17,7 @@
 module Data.Text.Internal.Lazy.Fusion
     (
       stream
+    , streamLn
     , unstream
     , unstreamChunks
     , length
@@ -55,6 +56,22 @@ stream text = Stream next (text :*: 0) unknownSize
         | otherwise = Yield c (txt :*: i+d)
         where Iter c d = iter t i
 {-# INLINE [0] stream #-}
+
+-- | /O(n)/ @'streamLn' t = 'stream' (t <> \'\\n\')@
+streamLn ::
+#if defined(ASSERTS)
+  HasCallStack =>
+#endif
+  Text -> Stream Char
+streamLn text = Stream next (text :*: 0) unknownSize
+  where
+    next (Empty :*: 0) = Yield '\n' (Empty :*: 1)
+    next (Empty :*: _) = Done
+    next (txt@(Chunk t@(I.Text _ _ len) ts) :*: i)
+        | i >= len  = next (ts :*: 0)
+        | otherwise = Yield c (txt :*: i+d)
+        where Iter c d = iter t i
+{-# INLINE [0] streamLn #-}
 
 -- | /O(n)/ Convert a 'Stream Char' into a 'Text', using the given
 -- chunk size.
